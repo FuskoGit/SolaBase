@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<title>SolaBase</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Rye&family=IM+Fell+English:ital@0;1&family=IM+Fell+English+SC&display=swap" rel="stylesheet">
+<style>
+/*CSS*/
+</style></head>
+<body>
+<canvas id="town"></canvas><div id="vignette"></div>
+
+<!-- ============ HUD ============ -->
+<div id="hud" class="hidden">
+  <div id="logbox" title="Telegraph"><div class="day" id="logDay">Day 1</div><div id="logLines">Saddling up...</div><i class="bang" id="bTele">!</i></div>
+  <div id="res" class="inkbox">
+    <div class="stat3" title="Paper balance"><label>Balance</label><b id="rBal">0.00</b><small>SOL</small></div>
+    <div class="stat3" title="Profit and loss"><label>Profit</label><b id="rPnl">+0.00</b><small id="rPnlPct">0%</small></div>
+    <div class="stat3" title="Win rate"><label>Win rate</label><b id="rWin">-</b><small id="rTrades">0 closed</small></div>
+  </div>
+  <div id="modeTag"></div>
+  <button id="gearBtn" class="lineicon" data-open="store" title="Settings"></button>
+  <div id="portrait" title="Wanted poster">
+    <div class="pm-title" id="hudGrade">WANTED</div>
+    <canvas id="avatar" width="120" height="120"></canvas>
+    <div class="pm-name" id="hudScore">0</div>
+  </div>
+  <div id="quest" class="inkbox"><b>Quest</b><span id="questText">Saddle up</span></div>
+  <div id="tips"><div class="tab">Sheriff</div><div class="tipcard" id="tipText">Welcome to SolaBase.</div><canvas id="sheriffFace" width="80" height="80" hidden></canvas></div>
+  <div id="items">
+    <button class="item" id="btnMap"><span class="em"></span><label>Map</label></button>
+    <button class="item" data-open="scout" id="btnScout"><span class="em"></span><label>Scout</label><i class="bang" id="bScout">!</i></button>
+    <button class="item" data-open="bounty"><span class="em"></span><label>Bounty Book</label><i class="bang" id="bBounty">!</i></button>
+    <button class="item" data-open="jail"><span class="em"></span><label>Jail</label><i class="bang" id="bJail">!</i></button>
+    <button class="item" data-open="posse"><span class="em"></span><label>Posse</label><i class="bang" id="bPosse">!</i></button>
+    <button class="item" data-open="vault"><span class="em"></span><label>Vault</label></button>
+    <button class="item big" id="btnRide"><span class="em"></span><label id="rideLabel">Ride!</label></button>
+  </div>
+  <div id="disclaimer">Paper trading: no real money is used. Not financial advice.</div>
+</div>
+
+<!-- ============ INTRO ============ -->
+<div id="intro" class="overlay">
+  <div class="logo"><span>SolaBase</span><small>copy the fastest guns on Solana</small></div>
+  <div class="poster intro-poster">
+    <div class="ptitle">WANTED</div>
+    <div class="psub">a trader worth riding with</div>
+    <label class="fl">Trader's Solana address</label>
+    <input id="addr" spellcheck="false" autocomplete="off" placeholder="Paste his wallet address">
+    <div id="addrErr" class="err"></div>
+    <button class="wood" id="btnTrack">Track him</button>
+    <div class="fine">SolaBase reads his last trades on-chain, scores him, then trades coins above <b>$15k</b> market cap with paper money.</div>
+    <details class="rpcbox"><summary>RPC settings</summary>
+      <label class="fl">Helius API key (free at helius.dev, makes scans 10x faster, recommended)</label>
+      <input id="heliusKey" spellcheck="false" placeholder="optional">
+      <label class="fl">Solana RPC URL (used when there is no Helius key)</label>
+      <input id="rpcUrl" spellcheck="false">
+      <label class="fl">Transactions to scan without Helius</label>
+      <select id="sigLimit"><option>200</option><option selected>400</option><option>800</option><option>1500</option></select>
+    </details>
+  </div>
+</div>
+
+<!-- ============ ANALYSIS ============ -->
+<div id="analysis" class="overlay hidden">
+  <div class="poster wide">
+    <div class="ptitle">WANTED</div>
+    <div class="prow">
+      <canvas id="wantedFace" width="200" height="200"></canvas>
+      <div class="pinfo">
+        <div class="paddr" id="aAddr"></div>
+        <div id="scanBox">
+          <div class="scanmsg" id="scanMsg">Saddling up...</div>
+          <div class="rope"><div id="scanBar"></div></div>
+          <div class="scanstats" id="scanStats"></div>
+        </div>
+        <div id="resultBox" class="hidden">
+          <div class="reward">REWARD <b id="aScore">0</b><small>/100</small></div>
+          <div class="stamp" id="aGrade">-</div>
+          <div class="verdict" id="aVerdict"></div>
+        </div>
+      </div>
+    </div>
+    <div id="resultMore" class="hidden">
+      <div class="statgrid" id="aStats"></div>
+      <div class="tiphead">Sheriff's notes</div>
+      <ul class="tiplist" id="aTips"></ul>
+      <div class="btnrow"><button class="wood ghost" id="btnAgain">Track someone else</button><button class="wood" id="btnRideWith">Ride with him &#8594;</button></div>
+    </div>
+    <div id="scanErr" class="err big hidden"></div>
+  </div>
+</div>
+
+<!-- ============ SETUP ============ -->
+<div id="setup" class="overlay hidden">
+  <div class="poster wide setup">
+    <div class="ptitle small">Saddle Up</div>
+    <div class="psub" id="setupSub"></div>
+    <div class="setgrid">
+      <div class="col">
+        <label class="fl">Paper balance (SOL)</label>
+        <input id="amount" type="number" min="0.1" step="0.1" value="1">
+        <div class="chips" id="amtChips"><button>0.5</button><button>1</button><button>2</button><button>5</button></div>
+        <label class="fl">Mode</label>
+        <div class="toggle" id="modeToggle"><button data-m="style" class="on">Ride his style</button><button data-m="live">Live copy</button><button data-m="backtest">Backtest</button></div>
+        <div class="fine" id="modeNote"></div>
+      </div>
+      <div class="col">
+        <div class="setrow"><label>Copy size</label><input id="sSize" type="number" value="10"><span>% of balance</span></div>
+        <div class="setrow"><label>Min entry mcap</label><input id="sMin" type="number" value="15"><span>$k</span></div>
+        <div class="setrow"><label>Max entry mcap</label><input id="sMax" type="number" value="1000"><span>$k</span></div>
+        <div class="setrow"><label>Stop loss</label><input id="sSL" type="number" value="30"><span>%</span></div>
+        <div class="setrow"><label>Take profit (half)</label><input id="sTP" type="number" value="100"><span>%</span></div>
+        <div class="setrow"><label>Skip if top 10 hold</label><input id="sBundle" type="number" value="35"><span>% +</span></div>
+        <div class="setrow"><label>Max open trades</label><input id="sMaxOpen" type="number" value="5"><span></span></div>
+        <div class="setrow so"><label>Match needed</label><input id="sNeed" type="number" value="72"><span>% fit to his style</span></div>
+        <div class="setrow so"><label>Max coin age</label><input id="sAge" type="number" value="240"><span>minutes</span></div>
+        <div class="setrow so"><label>Trailing stop</label><input id="sTrail" type="number" value="30"><span>% after take profit</span></div>
+        <div class="setrow so"><label>Time stop</label><input id="sTime" type="number" value="60"><span>min if not up 10%</span></div>
+      </div>
+    </div>
+    <div class="btnrow"><button class="wood ghost" id="btnBackAn">&#8592; Back</button><button class="wood big" id="btnStart">Start</button></div>
+  </div>
+</div>
+
+<!-- ============ PANELS ============ -->
+<div id="panel" class="overlay hidden"><div class="poster wide panel"><button class="x" id="panelX">&#10005;</button><div class="ptitle small" id="panelTitle"></div><div id="panelBody"></div></div></div>
+<div id="audioCtl" title="Music"><button id="muteBtn" aria-label="Mute music"></button><input id="vol" type="range" min="0" max="100" value="40" aria-label="Music volume"></div>
+<audio id="music" loop preload="auto" src="data:audio/mpeg;base64,/*MUSIC*/"></audio>
+<div id="fade"></div>
+<div id="toasts"></div>
+<script>
+/*JS*/
+</script>
+</body></html>
